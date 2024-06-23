@@ -19,13 +19,16 @@ public class KrakenSubscriber {
 
     private final KrakenConfigProperties krakenConfigProperties;
     private final KrakenListener krakenListener;
+
+    private final String symbol;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final static long DEPTH = 10;
 
-    public KrakenSubscriber(KrakenConfigProperties krakenConfigProperties, List<CandleConsumer> candleConsumers, Clock clock) {
+    public KrakenSubscriber(KrakenConfigProperties krakenConfigProperties, List<CandleConsumer> candleConsumers, Clock clock, String symbol) {
         this.krakenConfigProperties = krakenConfigProperties;
-        this.krakenListener = new KrakenListener(clock, candleConsumers, DEPTH);
+        this.symbol = symbol;
+        this.krakenListener = new KrakenListener(clock, candleConsumers, DEPTH, symbol);
     }
 
     public CompletableFuture<WebSocket> subscribe() {
@@ -36,18 +39,18 @@ public class KrakenSubscriber {
                 )
                 .thenCompose(ThrowingFunction.of(webSocket ->
                         webSocket.sendText(
-                                objectMapper.writeValueAsString(getSubscriptionRequest("BTC/USD")),
+                                objectMapper.writeValueAsString(getSubscriptionRequest(symbol)),
                                 true
                         ))
                 );
     }
 
-    private Map<String, Object> getSubscriptionRequest(String pair) {
+    private Map<String, Object> getSubscriptionRequest(String symbol) {
         return Map.of(
                 "method", "subscribe",
                 "params", Map.of(
                         "channel", "book",
-                        "symbol", List.of(pair),
+                        "symbol", List.of(symbol),
                         "depth", DEPTH
                 )
         );

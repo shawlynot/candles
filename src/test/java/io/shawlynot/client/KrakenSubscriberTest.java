@@ -14,7 +14,8 @@ class KrakenSubscriberTest {
         KrakenSubscriber client = new KrakenSubscriber(
                 new KrakenConfigProperties("wss://ws.kraken.com/v2"),
                 List.of(new StdOutCandleConsumer()),
-                Clock.systemUTC()
+                Clock.systemUTC(),
+                "BTC/USD"
         );
         client.subscribe();
         new CountDownLatch(1).await();
