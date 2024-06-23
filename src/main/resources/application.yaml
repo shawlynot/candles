@@ -1,2 +1,2 @@
 kraken:
-  rest-url: https://api.kraken.com
+  ws-endpoint: wss://ws.kraken.com/v2
