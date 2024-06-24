@@ -8,6 +8,7 @@ import io.shawlynot.producer.book.PruningOrderBook;
 import io.shawlynot.producer.consumer.CandleConsumer;
 import io.shawlynot.core.model.BidsAndAsks;
 import io.shawlynot.core.model.Candle;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -21,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+@Slf4j
 public class KrakenListener implements WebSocket.Listener {
 
     private final PruningOrderBook pruningOrderBook;
@@ -29,9 +31,7 @@ public class KrakenListener implements WebSocket.Listener {
     private final String symbol;
     private BigDecimal mid;
     private CandleState candleState = null;
-
     private final List<CandleConsumer> candleConsumers;
-
     private final Lock lock = new ReentrantLock();
 
 
@@ -95,13 +95,13 @@ public class KrakenListener implements WebSocket.Listener {
 
     @Override
     public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
-        System.out.println("Closed");
+        log.info("Connection to Kraken closed");
         return null;
     }
 
     @Override
     public void onOpen(WebSocket webSocket) {
-        System.out.println("Open");
+        log.info("Connection to Kraken open");
         scheduledExecutorService.scheduleAtFixedRate(this::publishCandle, 1, 1, TimeUnit.MINUTES);
         webSocket.request(1);
     }
@@ -140,7 +140,7 @@ public class KrakenListener implements WebSocket.Listener {
 
     @Override
     public void onError(WebSocket webSocket, Throwable error) {
-        error.printStackTrace();
+        log.error("Error in websocket connection to Kraken. Closing connection", error);
         webSocket.sendClose(2000, "error");
     }
 

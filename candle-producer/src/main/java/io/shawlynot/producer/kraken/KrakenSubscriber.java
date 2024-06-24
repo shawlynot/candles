@@ -2,19 +2,16 @@ package io.shawlynot.producer.kraken;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.shawlynot.producer.consumer.CandleConsumer;
-import org.springframework.stereotype.Component;
 import org.springframework.util.function.ThrowingFunction;
 
 import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.WebSocket;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 
-@Component
 public class KrakenSubscriber {
 
     private final KrakenConfigProperties krakenConfigProperties;
@@ -28,7 +25,7 @@ public class KrakenSubscriber {
         this.krakenListener = new KrakenListener(DEPTH, clock, krakenConfigProperties.symbol(), candleConsumers);
     }
 
-    public CompletableFuture<WebSocket> subscribe() {
+    public CompletableFuture<KrakenSubscriber> subscribe() {
         return HttpClient.newHttpClient().newWebSocketBuilder()
                 .buildAsync(
                         URI.create(krakenConfigProperties.wsEndpoint()),
@@ -39,7 +36,7 @@ public class KrakenSubscriber {
                                 objectMapper.writeValueAsString(getSubscriptionRequest(krakenConfigProperties.symbol())),
                                 true
                         ))
-                );
+                ).thenApply((ws) -> this);
     }
 
     private Map<String, Object> getSubscriptionRequest(String symbol) {
