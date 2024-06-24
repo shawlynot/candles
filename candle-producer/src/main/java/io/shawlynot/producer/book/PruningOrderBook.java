@@ -75,8 +75,6 @@ public class PruningOrderBook {
         side.addAll(ticksToAdd);
         side.sort(sideComparator);
 
-        // Kraken does not send a message to notify that a price level has gone "too deep" and requires clients "prune"
-        // them. This will remove any extra orders
         while (side.size() > depth) {
             side.remove(side.size() - 1);
         }

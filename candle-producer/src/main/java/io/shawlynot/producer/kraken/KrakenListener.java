@@ -1,9 +1,5 @@
 package io.shawlynot.producer.kraken;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.shawlynot.producer.book.PruningOrderBook;
 import io.shawlynot.producer.consumer.CandleConsumer;
 import io.shawlynot.core.model.BidsAndAsks;
@@ -23,28 +19,26 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * WebSocket listener that will take in ticks, and every mint
+ * WebSocket listener that receives ticks. Every minute on a scheduled thread, a candle is produced and passed to the
+ * registered consumers.
  */
 @Slf4j
 public class KrakenListener implements WebSocket.Listener {
 
     private final PruningOrderBook pruningOrderBook;
     private final Clock clock;
-    private final ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    private final String symbol;
     private BigDecimal mid;
     private CandleState candleState = null;
     private final List<CandleConsumer> candleConsumers;
     private final Lock lock = new ReentrantLock();
-
-
+    private final KrakenUpdateParser krakenUpdateParser;
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
     public KrakenListener(long depth, Clock clock, String symbol, List<CandleConsumer> candleConsumers) {
         this.clock = clock;
-        this.symbol = symbol;
         this.candleConsumers = candleConsumers;
         this.pruningOrderBook = new PruningOrderBook(depth);
+        krakenUpdateParser = new KrakenUpdateParser(symbol);
     }
 
     /**
@@ -64,46 +58,38 @@ public class KrakenListener implements WebSocket.Listener {
         return null;
     }
 
-    private void maybeUpdateOrderBook(String asString) {
-        JsonNode tree;
-        try {
-            tree = objectMapper.readTree(asString);
-            JsonNode maybeChannelIndicator = tree.get("channel");
-            if (maybeChannelIndicator == null || !"book".equals(maybeChannelIndicator.asText())) {
-                return;
-            }
-            var response = objectMapper.readValue(asString, KrakenResponse.class);
-            if (response instanceof KrakenBookResponse bookResponse) {
-                var bidAsksForSymbol = bookResponse.data().stream()
-                        .filter(ticks -> ticks.symbol().equals(symbol))
-                        .findAny();
-                if (bidAsksForSymbol.isEmpty()) {
-                    return;
-                }
-                var bidAsks = bidAsksForSymbol.get();
-                long tickCounts = bidAsks.bids().size() + bidAsks.asks().size();
-                try {
-                    lock.lock();
-                    if (bookResponse.type().equals("update")) {
-                        pruningOrderBook.update(new BidsAndAsks(bidAsks.bids(), bidAsks.asks()));
-                    } else if (bookResponse.type().equals("snapshot")) {
-                        pruningOrderBook.snapshot(new BidsAndAsks(bidAsks.bids(), bidAsks.asks()));
-                    }
-                    updateCandleState(tickCounts);
-                } finally {
-                    lock.unlock();
-                }
-            }
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     @Override
     public void onOpen(WebSocket webSocket) {
         log.info("Connection to Kraken open");
         scheduledExecutorService.scheduleAtFixedRate(this::publishCandle, 1, 1, TimeUnit.MINUTES);
         webSocket.request(1);
+    }
+
+    @Override
+    public void onError(WebSocket webSocket, Throwable error) {
+        log.error("Error in websocket connection to Kraken. Closing connection", error);
+        webSocket.sendClose(2000, "error");
+    }
+
+    private void maybeUpdateOrderBook(String update) {
+        var updateOrSnapshot = krakenUpdateParser.parseKrakenUpdate(update);
+        if (updateOrSnapshot == null) {
+            return;
+        }
+        KrakenTicks bidAsks = updateOrSnapshot.bidAsks();
+        long tickCounts = bidAsks.bids().size() + bidAsks.asks().size();
+        try {
+            lock.lock();
+            var asOrderBookUpdate = new BidsAndAsks(bidAsks.bids(), bidAsks.asks());
+            switch (updateOrSnapshot.type()) {
+                case UPDATE -> pruningOrderBook.update(asOrderBookUpdate);
+                case SNAPSHOT -> pruningOrderBook.snapshot(asOrderBookUpdate);
+            }
+            updateCandleState(tickCounts);
+        } finally {
+            lock.unlock();
+        }
+
     }
 
     private void publishCandle() {
@@ -136,12 +122,6 @@ public class KrakenListener implements WebSocket.Listener {
         if (mid.compareTo(candleState.getLow()) < 0) {
             candleState.setLow(mid);
         }
-    }
-
-    @Override
-    public void onError(WebSocket webSocket, Throwable error) {
-        log.error("Error in websocket connection to Kraken. Closing connection", error);
-        webSocket.sendClose(2000, "error");
     }
 
 
