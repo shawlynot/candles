@@ -22,6 +22,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * WebSocket listener that will take in ticks, and every mint
+ */
 @Slf4j
 public class KrakenListener implements WebSocket.Listener {
 
@@ -50,10 +53,14 @@ public class KrakenListener implements WebSocket.Listener {
     @Override
     public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
         String asString = data.toString();
-
         maybeUpdateOrderBook(asString);
-
         webSocket.request(1);
+        return null;
+    }
+
+    @Override
+    public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+        log.info("Connection to Kraken closed");
         return null;
     }
 
@@ -90,13 +97,6 @@ public class KrakenListener implements WebSocket.Listener {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
-    }
-
-
-    @Override
-    public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
-        log.info("Connection to Kraken closed");
-        return null;
     }
 
     @Override
@@ -145,7 +145,7 @@ public class KrakenListener implements WebSocket.Listener {
     }
 
 
-    public Candle generateCandle() {
+    private Candle generateCandle() {
         long now = clock.millis();
         if (candleState != null) {
             //build candle

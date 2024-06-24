@@ -6,6 +6,9 @@ import io.shawlynot.core.model.Candle;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+/**
+ * Consumes candles and sends to kafka in a json format
+ */
 @Component
 public class KafkaCandleConsumer implements CandleConsumer {
 

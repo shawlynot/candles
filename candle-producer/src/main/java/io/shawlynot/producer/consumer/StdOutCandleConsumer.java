@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.shawlynot.core.model.Candle;
 import org.springframework.stereotype.Component;
 
+/**
+ * Consumes candles and outputs them to stdout in JSON format
+ */
 @Component
 public class StdOutCandleConsumer implements CandleConsumer {
 

@@ -12,7 +12,12 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * //TODO talk about KRaken depth
+ * Order book that supports "pruning". Assume there is an active subscription to the Kraken exchange to tick level data
+ * up to a depth of 10. Assume Kraken provides a new tick such that there are now 11 asks in the local order book.
+ * Kraken does not send an explicit "remove" tick to remove the 11th ask, and expects clients to prune them
+ * automatically.
+ * <p>
+ * This class is <b>not</b> thread safe.
  */
 @Slf4j
 public class PruningOrderBook {
@@ -27,7 +32,10 @@ public class PruningOrderBook {
     private final Comparator<Tick> ASKS_COMPARATOR = Comparator.comparing(Tick::price);
     private final long depth;
 
-
+    /**
+     * Create a new order book that automatically prunes to the specified depth
+     * @param depth the depth over which ticks will be pruned
+     */
     public PruningOrderBook(long depth) {
         this.depth = depth;
     }
@@ -55,15 +63,15 @@ public class PruningOrderBook {
             log.warn("Order book is in an invalid state: bids or asks is empty");
         }
     }
-
-
     private void updateSide(List<Tick> updates, List<Tick> side, Comparator<Tick> sideComparator) {
         if (updates.isEmpty()) {
             return;
         }
 
-        side.removeIf(tick -> updates.stream().anyMatch(update -> update.price().compareTo(tick.price()) == 0));
-        var ticksToAdd = updates.stream().filter(tick -> tick.qty().compareTo(BigDecimal.ZERO) != 0).toList();
+        side.removeIf(tick -> updatesContainSamePriceLevel(updates, tick));
+        var ticksToAdd = updates.stream()
+                .filter(tick -> tick.qty().compareTo(BigDecimal.ZERO) != 0)
+                .toList();
         side.addAll(ticksToAdd);
         side.sort(sideComparator);
 
@@ -74,5 +82,7 @@ public class PruningOrderBook {
         }
     }
 
-
+    private boolean updatesContainSamePriceLevel(List<Tick> updates, Tick toCompare) {
+        return updates.stream().anyMatch(update -> update.price().compareTo(toCompare.price()) == 0);
+    }
 }

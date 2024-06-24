@@ -21,7 +21,49 @@ class PruningOrderBookTest {
     }
 
     @Test
-    void testUpdatesReplaceLevelsInSnapShot() {
+    void testSnapshotResetsBook() {
+        pruningOrderBook.snapshot(new BidsAndAsks(
+                List.of(Tick.fromLongs(1L, 1L)),
+                List.of(Tick.fromLongs(6L, 10L))
+        ));
+        pruningOrderBook.snapshot(new BidsAndAsks(
+                List.of(Tick.fromLongs(2L, 1L), Tick.fromLongs(3L, 1L)),
+                List.of(Tick.fromLongs(4L, 2L), Tick.fromLongs(5L, 2L))
+        ));
+
+        assertThat(pruningOrderBook.getBids()).containsExactly(
+                Tick.fromLongs(3L, 1L),
+                Tick.fromLongs(2L, 1L)
+                );
+        assertThat(pruningOrderBook.getAsks()).containsExactly(
+                Tick.fromLongs(4L, 2L),
+                Tick.fromLongs(5L, 2L)
+        );
+    }
+
+    @Test
+    void testUpdatesAreAddedToBook() {
+        pruningOrderBook.snapshot(new BidsAndAsks(
+                List.of(Tick.fromLongs(1L, 1L)),
+                List.of(Tick.fromLongs(6L, 10L))
+        ));
+        pruningOrderBook.update(new BidsAndAsks(
+                List.of(Tick.fromLongs(2L, 1L)),
+                List.of(Tick.fromLongs(3L, 2L))
+        ));
+
+        assertThat(pruningOrderBook.getBids()).containsExactly(
+                Tick.fromLongs(2L, 1L),
+                Tick.fromLongs(1L, 1L)
+        );
+        assertThat(pruningOrderBook.getAsks()).containsExactly(
+                Tick.fromLongs(3L, 2L),
+                Tick.fromLongs(6L, 10L)
+        );
+    }
+
+    @Test
+    void testUpdatesReplaceLevelsInBook() {
         pruningOrderBook.snapshot(new BidsAndAsks(
                 List.of(Tick.fromLongs(1L, 1L), Tick.fromLongs(2L, 3L)),
                 List.of(Tick.fromLongs(6L, 10L))
@@ -86,7 +128,7 @@ class PruningOrderBookTest {
 
 
     @Test
-    void testRemovesZeroQuantity(){
+    void testRemovesZeroQuantity() {
         pruningOrderBook.snapshot(new BidsAndAsks(
                 List.of(Tick.fromLongs(1L, 1L), Tick.fromLongs(2L, 3L)),
                 List.of(Tick.fromLongs(6L, 10L))
