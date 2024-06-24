@@ -24,7 +24,7 @@ class PruningOrderBookTest {
 
     @BeforeEach
     void setUp() {
-        pruningOrderBook = new PruningOrderBook(clock, 2);
+        pruningOrderBook = new PruningOrderBook(2);
     }
 
     @Test

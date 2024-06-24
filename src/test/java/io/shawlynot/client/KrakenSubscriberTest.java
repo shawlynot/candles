@@ -15,10 +15,9 @@ class KrakenSubscriberTest {
     @Test
     void test() throws InterruptedException {
         KrakenSubscriber client = new KrakenSubscriber(
-                new KrakenConfigProperties("wss://ws.kraken.com/v2"),
+                new KrakenConfigProperties("wss://ws.kraken.com/v2", "BTC/USD"),
                 List.of(new StdOutCandleConsumer()),
-                Clock.systemUTC(),
-                "BTC/USD"
+                Clock.systemUTC()
         );
         client.subscribe();
         new CountDownLatch(1).await();

@@ -7,7 +7,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.shawlynot.book.PruningOrderBook;
 import io.shawlynot.consumer.CandleConsumer;
 import io.shawlynot.model.BidsAndAsks;
+import io.shawlynot.model.Candle;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.net.http.WebSocket;
 import java.time.Clock;
 import java.util.List;
@@ -21,19 +24,25 @@ import java.util.concurrent.locks.ReentrantLock;
 public class KrakenListener implements WebSocket.Listener {
 
     private final PruningOrderBook pruningOrderBook;
+    private final Clock clock;
     private final ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     private final String symbol;
 
-    private final  List<CandleConsumer> candleConsumers;
+    private BigDecimal mid;
+    private CandleState candleState = null;
+
+    private final List<CandleConsumer> candleConsumers;
 
     private final Lock lock = new ReentrantLock();
 
+
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
-    public KrakenListener(Clock clock, long depth, String symbol, List<CandleConsumer> candleConsumers) {
+    public KrakenListener(long depth, Clock clock, String symbol, List<CandleConsumer> candleConsumers) {
+        this.clock = clock;
         this.symbol = symbol;
         this.candleConsumers = candleConsumers;
-        this.pruningOrderBook = new PruningOrderBook(clock, depth);
+        this.pruningOrderBook = new PruningOrderBook(depth);
     }
 
     /**
@@ -66,6 +75,7 @@ public class KrakenListener implements WebSocket.Listener {
                     return;
                 }
                 var bidAsks = bidAsksForSymbol.get();
+                long tickCounts = bidAsks.bids().size() + bidAsks.asks().size();
                 try {
                     lock.lock();
                     if (bookResponse.type().equals("update")) {
@@ -73,6 +83,7 @@ public class KrakenListener implements WebSocket.Listener {
                     } else if (bookResponse.type().equals("snapshot")) {
                         pruningOrderBook.snapshot(new BidsAndAsks(bidAsks.bids(), bidAsks.asks()));
                     }
+                    updateCandleState(tickCounts);
                 } finally {
                     lock.unlock();
                 }
@@ -99,12 +110,32 @@ public class KrakenListener implements WebSocket.Listener {
     private void publishCandle() {
         try {
             lock.lock();
-            var candle = pruningOrderBook.getCandle();
-            for (var consumer: candleConsumers) {
+            var candle = getCandle();
+            for (var consumer : candleConsumers) {
                 consumer.accept(candle);
             }
         } finally {
             lock.unlock();
+        }
+    }
+
+    private void updateCandleState(long ticksCount) {
+        mid = pruningOrderBook.getAsks().get(0).price().add(pruningOrderBook.getBids().get(0).price()).divide(BigDecimal.valueOf(2), MathContext.UNLIMITED);
+        if (candleState == null) {
+            candleState = new CandleState(
+                    mid,
+                    mid,
+                    mid,
+                    ticksCount,
+                    clock.millis()
+            );
+        }
+        candleState.incrementTicksCount(ticksCount);
+        if (mid.compareTo(candleState.getHigh()) > 0) {
+            candleState.setHigh(mid);
+        }
+        if (mid.compareTo(candleState.getLow()) < 0) {
+            candleState.setLow(mid);
         }
     }
 
@@ -113,4 +144,31 @@ public class KrakenListener implements WebSocket.Listener {
         error.printStackTrace();
         webSocket.sendClose(2000, "error");
     }
+
+
+    public Candle getCandle() {
+        long now = clock.millis();
+        if (candleState != null) {
+            //build candle
+            var candle = new Candle(
+                    candleState.getOpen(),
+                    candleState.getHigh(),
+                    candleState.getLow(),
+                    mid,
+                    candleState.getTicks(),
+                    candleState.timestamp()
+            );
+
+            //update state
+            candleState = new CandleState(
+                    mid,
+                    mid,
+                    mid,
+                    0,
+                    now);
+            return candle;
+        }
+        return null;
+    }
+
 }
