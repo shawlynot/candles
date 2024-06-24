@@ -1,13 +1,22 @@
 package io.shawlynot.client;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.math.BigDecimal;
 
 public class CandleState {
 
+    @Getter
     private final BigDecimal open;
+    @Setter
+    @Getter
     private BigDecimal high;
+    @Setter
+    @Getter
     private BigDecimal low;
 
+    @Getter
     private long ticks;
 
     private final long timestamp;
@@ -26,35 +35,12 @@ public class CandleState {
         this.timestamp = timestamp;
     }
 
-    public BigDecimal getOpen() {
-        return open;
-    }
-
-    public BigDecimal getHigh() {
-        return high;
-    }
-
-    public BigDecimal getLow() {
-        return low;
-    }
-
     public long timestamp() {
         return timestamp;
-    }
-
-    public void setHigh(BigDecimal high) {
-        this.high = high;
-    }
-
-    public void setLow(BigDecimal low) {
-        this.low = low;
     }
 
     public void incrementTicksCount(long ticks) {
         this.ticks += ticks;
     }
 
-    public long getTicks() {
-        return ticks;
-    }
 }
