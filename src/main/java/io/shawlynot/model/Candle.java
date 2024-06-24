@@ -7,5 +7,6 @@ public record Candle(
         BigDecimal high,
         BigDecimal low,
         BigDecimal close,
+        Long ticks,
         Long timestamp
 ){}

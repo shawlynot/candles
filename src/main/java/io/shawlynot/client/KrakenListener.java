@@ -1,6 +1,7 @@
 package io.shawlynot.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.shawlynot.book.PruningOrderBook;
@@ -11,16 +12,28 @@ import java.net.http.WebSocket;
 import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class KrakenListener implements WebSocket.Listener {
 
     private final PruningOrderBook pruningOrderBook;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     private final String symbol;
 
-    public KrakenListener(Clock clock, List<CandleConsumer> candleConsumers, long depth, String symbol) {
+    private final  List<CandleConsumer> candleConsumers;
+
+    private final Lock lock = new ReentrantLock();
+
+    private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+
+    public KrakenListener(Clock clock, long depth, String symbol, List<CandleConsumer> candleConsumers) {
         this.symbol = symbol;
-        this.pruningOrderBook = new PruningOrderBook(clock, candleConsumers, depth);
+        this.candleConsumers = candleConsumers;
+        this.pruningOrderBook = new PruningOrderBook(clock, depth);
     }
 
     /**
@@ -28,7 +41,6 @@ public class KrakenListener implements WebSocket.Listener {
      */
     @Override
     public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-        System.out.println(data);
         String asString = data.toString();
 
         maybeUpdateOrderBook(asString);
@@ -41,7 +53,8 @@ public class KrakenListener implements WebSocket.Listener {
         JsonNode tree;
         try {
             tree = objectMapper.readTree(asString);
-            if (!"book".equals(tree.get("channel").asText())) {
+            JsonNode maybeChannelIndicator = tree.get("channel");
+            if (maybeChannelIndicator == null || !"book".equals(maybeChannelIndicator.asText())) {
                 return;
             }
             var response = objectMapper.readValue(asString, KrakenResponse.class);
@@ -53,10 +66,15 @@ public class KrakenListener implements WebSocket.Listener {
                     return;
                 }
                 var bidAsks = bidAsksForSymbol.get();
-                if (bookResponse.type().equals("update")) {
-                    pruningOrderBook.update(new BidsAndAsks(bidAsks.bids(), bidAsks.asks()));
-                } else if (bookResponse.type().equals("snapshot")) {
-                    pruningOrderBook.snapshot(new BidsAndAsks(bidAsks.bids(), bidAsks.asks()));
+                try {
+                    lock.lock();
+                    if (bookResponse.type().equals("update")) {
+                        pruningOrderBook.update(new BidsAndAsks(bidAsks.bids(), bidAsks.asks()));
+                    } else if (bookResponse.type().equals("snapshot")) {
+                        pruningOrderBook.snapshot(new BidsAndAsks(bidAsks.bids(), bidAsks.asks()));
+                    }
+                } finally {
+                    lock.unlock();
                 }
             }
         } catch (JsonProcessingException e) {
@@ -74,6 +92,25 @@ public class KrakenListener implements WebSocket.Listener {
     @Override
     public void onOpen(WebSocket webSocket) {
         System.out.println("Open");
+        scheduledExecutorService.scheduleAtFixedRate(this::publishCandle, 1, 1, TimeUnit.MINUTES);
         webSocket.request(1);
+    }
+
+    private void publishCandle() {
+        try {
+            lock.lock();
+            var candle = pruningOrderBook.getCandle();
+            for (var consumer: candleConsumers) {
+                consumer.accept(candle);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void onError(WebSocket webSocket, Throwable error) {
+        error.printStackTrace();
+        webSocket.sendClose(2000, "error");
     }
 }

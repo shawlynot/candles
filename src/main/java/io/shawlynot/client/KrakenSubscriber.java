@@ -28,7 +28,7 @@ public class KrakenSubscriber {
     public KrakenSubscriber(KrakenConfigProperties krakenConfigProperties, List<CandleConsumer> candleConsumers, Clock clock, String symbol) {
         this.krakenConfigProperties = krakenConfigProperties;
         this.symbol = symbol;
-        this.krakenListener = new KrakenListener(clock, candleConsumers, DEPTH, symbol);
+        this.krakenListener = new KrakenListener(clock, DEPTH, symbol, candleConsumers);
     }
 
     public CompletableFuture<WebSocket> subscribe() {

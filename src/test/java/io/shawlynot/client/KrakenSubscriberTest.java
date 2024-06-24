@@ -7,6 +7,9 @@ import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
+/**
+ * Integration test, just for validation
+ */
 class KrakenSubscriberTest {
 
     @Test
