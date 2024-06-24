@@ -10,9 +10,10 @@ import java.util.concurrent.CountDownLatch;
 /**
  * For manual validation
  */
+
 class KrakenSubscriberTest {
 
-    @Test
+//    @Test
     void test() throws InterruptedException {
         KrakenSubscriber client = new KrakenSubscriber(
                 new KrakenConfigProperties("wss://ws.kraken.com/v2", "BTC/USD"),
