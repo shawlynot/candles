@@ -1,21 +1,14 @@
 package io.shawlynot.book;
 
 
-import io.shawlynot.consumer.CandleConsumer;
 import io.shawlynot.model.BidsAndAsks;
-import io.shawlynot.model.Candle;
 import io.shawlynot.model.Tick;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 class PruningOrderBookTest {
 
