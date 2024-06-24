@@ -1,4 +1,4 @@
-package io.shawlynot.client;
+package io.shawlynot.kraken;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

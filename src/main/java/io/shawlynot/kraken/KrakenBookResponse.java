@@ -1,4 +1,4 @@
-package io.shawlynot.client;
+package io.shawlynot.kraken;
 
 import java.util.List;
 

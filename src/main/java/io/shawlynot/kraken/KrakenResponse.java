@@ -1,4 +1,4 @@
-package io.shawlynot.client;
+package io.shawlynot.kraken;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;

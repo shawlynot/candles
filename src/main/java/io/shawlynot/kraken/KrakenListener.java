@@ -1,4 +1,4 @@
-package io.shawlynot.client;
+package io.shawlynot.kraken;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;

@@ -54,9 +54,6 @@ public class PruningOrderBook {
         if (asks.isEmpty() || bids.isEmpty()) {
             log.warn("Order book is in an invalid state: bids or asks is empty");
         }
-        if (asks.get(0).price().compareTo(bids.get(0).price()) < 0) {
-            log.warn("Order book is in an invalid state: the lowest ask is lower than the highest bid");
-        }
     }
 
 

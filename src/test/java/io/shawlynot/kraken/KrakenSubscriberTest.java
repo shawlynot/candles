@@ -1,4 +1,4 @@
-package io.shawlynot.client;
+package io.shawlynot.kraken;
 
 import io.shawlynot.consumer.StdOutCandleConsumer;
 import org.junit.jupiter.api.Test;
@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * Integration test, just for validation
+ * For manual validation
  */
 class KrakenSubscriberTest {
 

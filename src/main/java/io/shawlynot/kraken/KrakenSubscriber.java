@@ -1,4 +1,4 @@
-package io.shawlynot.client;
+package io.shawlynot.kraken;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.shawlynot.consumer.CandleConsumer;

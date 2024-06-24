@@ -1,2 +1,10 @@
 kraken:
   ws-endpoint: wss://ws.kraken.com/v2
+  symbol: "BTC/USD"
+kafka-candle:
+  topic: "candles"
+
+spring:
+  kafka:
+    bootstrap-servers: #TODO
+

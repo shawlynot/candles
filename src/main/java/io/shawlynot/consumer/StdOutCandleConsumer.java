@@ -3,9 +3,9 @@ package io.shawlynot.consumer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.shawlynot.model.Candle;
+import org.springframework.stereotype.Component;
 
-import java.util.function.Consumer;
-
+@Component
 public class StdOutCandleConsumer implements CandleConsumer {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
