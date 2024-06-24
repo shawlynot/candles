@@ -11,8 +11,15 @@
     </parent>
     <artifactId>candle-consumer</artifactId>
     <name>Candle consumer</name>
+    <version>0.0.1-SNAPSHOT</version>
     <description>Consumes candles from kafka</description>
+
     <dependencies>
+        <dependency>
+            <groupId>io.shawlynot</groupId>
+            <artifactId>candle-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>

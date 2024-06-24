@@ -16,6 +16,7 @@
   <modules>
     <module>candle-producer</module>
     <module>candle-consumer</module>
+    <module>candle-core</module>
   </modules>
   <properties>
     <java.version>17</java.version>
