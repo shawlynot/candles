@@ -19,7 +19,6 @@ import static org.mockito.Mockito.mock;
 
 class PruningOrderBookTest {
 
-    Clock clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC);
     PruningOrderBook pruningOrderBook;
 
     @BeforeEach
@@ -62,21 +61,10 @@ class PruningOrderBookTest {
         assertThat(pruningOrderBook.getBids()).containsExactly(
                 Tick.fromLongs(4L, 1L),
                 Tick.fromLongs(2L, 3L)
+                // the price=1 tick has been removed
         );
         assertThat(pruningOrderBook.getAsks()).containsExactly(
                 Tick.fromLongs(6L, 10L)
         );
     }
-
-
-    static class StubConsumer implements CandleConsumer {
-
-        List<Candle> candles = new ArrayList<>();
-
-        @Override
-        public void accept(Candle candle) {
-            candles.add(candle);
-        }
-    }
-
 }

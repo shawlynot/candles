@@ -27,7 +27,6 @@ public class KrakenListener implements WebSocket.Listener {
     private final Clock clock;
     private final ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     private final String symbol;
-
     private BigDecimal mid;
     private CandleState candleState = null;
 
@@ -110,7 +109,7 @@ public class KrakenListener implements WebSocket.Listener {
     private void publishCandle() {
         try {
             lock.lock();
-            var candle = getCandle();
+            var candle = generateCandle();
             for (var consumer : candleConsumers) {
                 consumer.accept(candle);
             }
@@ -146,7 +145,7 @@ public class KrakenListener implements WebSocket.Listener {
     }
 
 
-    public Candle getCandle() {
+    public Candle generateCandle() {
         long now = clock.millis();
         if (candleState != null) {
             //build candle
